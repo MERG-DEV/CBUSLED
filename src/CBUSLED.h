@@ -41,39 +41,39 @@
 
 #pragma once
 
-#ifndef DEBUG_SERIAL
-#define DEBUG_SERIAL Serial
-#endif
+#define BLINK_RATE 500         // default - flash at 1Hz, 500mS on, 500mS off
+#define PULSE_ON_TIME 10       // default pulseon time
 
-#define BLINK_RATE 500    // flash at 1Hz, 500mS on, 500mS off
-#define PULSE_ON_TIME 5
-
-#include <Arduino.h>      // for definition of byte datatype
-// #include <Streaming.h>
+#include <Arduino.h>           // for definition of byte datatype
 
 //
 /// class to encapsulate a non-blocking LED
 //
 
+/// virtual methods specified so that a super class could use different IO technology, e.g. an I2C expander
+
 class CBUSLED {
 
 public:
   CBUSLED();
-  void virtual setPin(byte pin);
-  bool getState();
-  void on();
-  void off();
-  void toggle();
-  void blink();
-  virtual void run();
-  void pulse();
+  CBUSLED(const byte pin);
+
+  virtual void setPin(const byte pin);
+  bool getState(void);
+  void on(void);
+  void off(void);
+  void toggle(void);
+  void blink(const unsigned int rate = BLINK_RATE);                 // note default paramater value
+  void pulse(const unsigned int duration = PULSE_ON_TIME);          // note default paramater value
+  virtual void run(void);
 
 protected:
   byte _pin;
   bool _state;
   bool _blink;
   bool _pulse;
-  unsigned long _lastTime, _pulseStart;
-  virtual void _write(byte pin, bool state);
+  unsigned int _blink_rate, _pulse_duration;
+  unsigned long _timer_start;
+  virtual void _update(void);
 };
 

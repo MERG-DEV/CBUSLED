@@ -41,17 +41,26 @@
 /// class for individual LED with non-blocking control
 //
 
+// constructors
+
 CBUSLED::CBUSLED() {
 
   _state = LOW;
   _blink = false;
   _pulse = false;
-  _lastTime = 0UL;
 }
 
-//  set the pin for this LED
+CBUSLED::CBUSLED(const byte pin) : _pin(pin) {
 
-void CBUSLED::setPin(byte pin) {
+  _state = LOW;
+  _blink = false;
+  _pulse = false;
+  pinMode(_pin, OUTPUT);
+}
+
+// set the pin for this LED
+
+void CBUSLED::setPin(const byte pin) {
 
   _pin = pin;
   pinMode(_pin, OUTPUT);
@@ -70,6 +79,8 @@ void CBUSLED::on(void) {
 
   _state = HIGH;
   _blink = false;
+  _pulse = false;
+  _update();
 }
 
 // turn LED state off
@@ -78,6 +89,8 @@ void CBUSLED::off(void) {
 
   _state = LOW;
   _blink = false;
+  _pulse = false;
+  _update();
 }
 
 // toggle LED state from on to off or vv
@@ -85,54 +98,60 @@ void CBUSLED::off(void) {
 void CBUSLED::toggle(void) {
 
   _state = !_state;
+  _update();
 }
 
-// blink LED
+// blink the LED
 
-void CBUSLED::blink() {
+void CBUSLED::blink(const unsigned int rate) {          // note default paramater value
 
   _blink = true;
+  _pulse = false;
+  _blink_rate = rate;
+  _state = LOW;
+  _timer_start = 0;    // timer will expire immediately and illumiate LED
 }
 
 // pulse the LED
 
-void CBUSLED::pulse() {
+void CBUSLED::pulse(const unsigned int duration) {      // note default paramater value
 
   _pulse = true;
+  _blink = false;
   _state = HIGH;
-  _pulseStart = millis();
-  run();
+  _pulse_duration = duration;
+  _update();
+  _timer_start = millis();    // the LED will illuminate now and then toggle once the timer expires
 }
 
 // actually operate the LED dependent upon its current state
 // must be called frequently from loop() if the LED is set to blink or pulse
 
-void CBUSLED::run() {
+void CBUSLED::run(void) {
 
+  // blinking - toggle each time timer expires
   if (_blink) {
-
-    // blinking
-    if ((millis() - _lastTime) >= BLINK_RATE) {
+    if ((millis() - _timer_start) >= _blink_rate) {
       toggle();
-      _lastTime = millis();
+      _timer_start = millis();
     }
   }
 
-  // single pulse
+  // single pulse - switch off after timer expires
   if (_pulse) {
-    if (millis() - _pulseStart >= PULSE_ON_TIME) {
+    if (millis() - _timer_start >= PULSE_ON_TIME) {
       _pulse = false;
       _state = LOW;
+      _update();
     }
   }
 
-  _write(_pin, _state);
 }
 
 // write to the physical pin
 
-void CBUSLED::_write(byte pin, bool state) {
+void CBUSLED::_update(void) {
 
-  // DEBUG_SERIAL << F("> mcu pin = ") << pin << F(", state = ") << state << endl;
-  digitalWrite(pin, state);
+  digitalWrite(_pin, _state);
 }
+
